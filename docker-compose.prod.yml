@@ -1,0 +1,79 @@
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: org_app
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=db
+      - DB_DATABASE=org
+      - DB_USERNAME=org_user
+      - REDIS_HOST=redis
+    volumes:
+      - ./storage:/var/www/storage
+    networks:
+      - org_network
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: mysql:8.0
+    container_name: org_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: org
+      MYSQL_USER: org_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - org_network
+
+  redis:
+    image: redis:alpine
+    container_name: org_redis
+    restart: unless-stopped
+    networks:
+      - org_network
+
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: org_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+    networks:
+      - org_network
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: org_ssl
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme:/etc/acme.sh
+    environment:
+      - DEFAULT_EMAIL=${SSL_EMAIL}
+
+networks:
+  org_network:
+    driver: bridge
+
+volumes:
+  dbdata:
+  certs:
+  vhost:
+  html:
+  acme: 
