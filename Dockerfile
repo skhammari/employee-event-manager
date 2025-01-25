@@ -30,12 +30,19 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 # Set working directory
 WORKDIR /var/www
 
-# Copy application files
-COPY . /var/www/
+# Copy composer files first
+COPY composer.json composer.lock ./
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader
-RUN npm install && npm run build
+# Install dependencies including dev dependencies for seeding
+RUN composer install --no-scripts
+
+# Copy the rest of the application
+COPY . .
+
+# Install dependencies and optimize
+RUN composer dump-autoload --optimize && \
+    npm install && \
+    npm run build
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
