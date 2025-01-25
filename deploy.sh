@@ -15,15 +15,27 @@ sed -i "s/APP_DEBUG=.*/APP_DEBUG=false/" .env
 sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" .env
 sed -i "s/DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD/" .env
 
-# Install Composer dependencies
-docker run --rm \
-    -u "$(id -u):$(id -g)" \
-    -v "$(pwd):/var/www/html" \
-    -w /var/www/html \
-    composer:latest composer install --optimize-autoloader --no-dev
+# Install PHP and required extensions
+sudo apt-get update
+sudo apt-get install -y php8.2-cli php8.2-gd php8.2-intl php8.2-zip php8.2-mbstring php8.2-xml php8.2-curl
+
+# Install Composer locally
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+php composer-setup.php --quiet
+rm composer-setup.php
+mv composer.phar /usr/local/bin/composer
+
+# Install Laravel Sail
+composer require laravel/sail --dev
+
+# Generate sail configuration
+php artisan sail:install --with=mysql,redis,mailpit
+
+# Copy our production sail configuration
+cp docker-compose.sail.yml docker-compose.yml
 
 # Start Sail with production configuration
-SAIL_FILES=docker-compose.sail.yml ./vendor/bin/sail up -d
+./vendor/bin/sail up -d
 
 # Wait for database to be ready
 echo "Waiting for database to be ready..."
@@ -56,4 +68,7 @@ echo "Member area: http://localhost/member"
 echo ""
 echo "Default admin credentials:"
 echo "Email: admin@example.com"
-echo "Password: password" 
+echo "Password: password"
+
+# Show application logs
+./vendor/bin/sail logs 
