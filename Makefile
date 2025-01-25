@@ -9,6 +9,9 @@ up: ## Start the application
 down: ## Stop the application
 	docker compose -f docker-compose.prod.yml down
 
+stop: ## Stop the application and remove volumes
+	docker compose -f docker-compose.prod.yml down -v
+
 restart: down up ## Restart the application
 
 build: ## Rebuild the application
@@ -16,7 +19,13 @@ build: ## Rebuild the application
 	docker compose -f docker-compose.prod.yml up -d
 
 logs: ## View container logs
-	docker-compose -f docker-compose.prod.yml logs -f
+	docker compose -f docker-compose.prod.yml logs -f
+
+logs-db: ## View database logs
+	docker compose -f docker-compose.prod.yml logs -f db
+
+logs-app: ## View application logs
+	docker compose -f docker-compose.prod.yml logs -f app
 
 ps: ## List containers
 	docker compose -f docker-compose.prod.yml ps
@@ -49,4 +58,20 @@ db-shell: ## Access the database shell
 	docker compose -f docker-compose.prod.yml exec db mysql -u root -p
 
 redis-shell: ## Access the Redis shell
-	docker compose -f docker-compose.prod.yml exec redis redis-cli 
+	docker compose -f docker-compose.prod.yml exec redis redis-cli
+
+clean: stop ## Clean up all containers and volumes
+	docker compose -f docker-compose.prod.yml rm -f
+	docker volume prune -f
+
+restart-db: ## Restart only the database container
+	docker compose -f docker-compose.prod.yml restart db
+
+restart-app: ## Restart only the application container
+	docker compose -f docker-compose.prod.yml restart app
+
+health: ## Check container health
+	@echo "Checking container health..."
+	@docker compose -f docker-compose.prod.yml ps
+	@echo "\nContainer Logs:"
+	@docker compose -f docker-compose.prod.yml logs --tail=20 
